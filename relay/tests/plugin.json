@@ -1,0 +1,49 @@
+[
+  {
+    "name": "asks the hub for the balance of the provider's key",
+    "hook": "buildBalanceRequest",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} }
+    ],
+    "expected": { "method": "GET", "path": "/balance-summary" }
+  },
+  {
+    "name": "reads the credits the hub reports",
+    "hook": "parseBalance",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} },
+      {
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"balance\":12.5,\"unit\":\"credit\",\"realm\":\"intl\",\"accounts_enabled\":2,\"accounts_with_credit_data\":2,\"updated_at\":1790000000}"
+      }
+    ],
+    "expected": { "amount": 12.5, "currency": "CRD" }
+  },
+  {
+    "name": "says a key is refused instead of showing zero",
+    "hook": "parseBalance",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-bad", "config": {} },
+      {
+        "status": 401,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"error\":{\"message\":\"invalid key\"}}"
+      }
+    ],
+    "expected": { "error": "密钥无效或没有权限（401）" }
+  },
+  {
+    "name": "says the hub has no snapshot yet",
+    "hook": "parseBalance",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} },
+      {
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"balance\":null,\"unit\":\"credit\",\"realm\":\"intl\",\"accounts_enabled\":0,\"accounts_with_credit_data\":0,\"updated_at\":null}"
+      }
+    ],
+    "expected": { "error": "hub 还没有这个 key 的余额快照" }
+  }
+]

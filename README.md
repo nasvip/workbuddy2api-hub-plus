@@ -7,6 +7,15 @@
 插件只申请 `provider` 一项能力：不联网、不读请求正文、不存数据、没有界面代码。上游请求由 AstrLink
 发出，密钥始终在 AstrLink 手里，插件看不到。
 
+## 两个版本，装一个就行
+
+| 插件 | 地址 | 特点 |
+| --- | --- | --- |
+| **本目录**（v2 供应商适配器） | `https://github.com/nasvip/workbuddy2api-hub-plus` | 国际版 / 国内版两种类型；错误语义可按错误体判定（402 也能故障切换）；插件逐请求跑钩子 |
+| **[relay/](relay/README.md)**（v1 new-api 契约） | `https://github.com/nasvip/workbuddy2api-hub-plus/tree/v0.2.0/relay` | 提供商页有**余额卡**（读 hub 的 `/v1/balance-summary`，用提供商自己的 key）、密钥提示；网关直通，插件不跑 JS |
+
+两者可以同时装（key 不同），但同一个 hub 建议只留一个提供商，免得重复路由。
+
 ## 它做了什么
 
 | 能力 | 说明 |
@@ -108,9 +117,9 @@ AstrLink 插件平台现在的边界，纯插件绕不过去（本项目也不�
 ## 版本
 
 - `0.1.0`：提供商适配器（Chat / Responses 直通、模型拉取、错误映射、双区模型清单）。
+- `0.2.0`：新增 [relay/](relay/README.md) —— new-api 插件契约（apiVersion 1）版本，带提供商页余额卡和密钥提示；本目录的 v2 适配器不变。
 
-后续：`0.2.0` 额度与健康面板（需要 `ui.code`、`network` 能力，插件设置里填 hub 地址和密钥）；
-`0.3.0` 客户端模型名自动兜底（`route` 钩子，设置里可关）。
+后续：客户端模型名自动兜底（`route` 钩子，设置里可关）。
 
 ## 声明
 

@@ -1,0 +1,9 @@
+{
+  "name": "astrlink-plugin-workbuddy2api-hub-relay",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "WorkBuddy2API Hub as an AstrLink provider, with its balance on the provider page",
+  "engines": { "astrlink": ">=0.1.0-0" },
+  "astrlink": { "plugin": "src/plugin.ts" }
+}

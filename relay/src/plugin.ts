@@ -1,0 +1,106 @@
+// workbuddy2api-hub-relay: WorkBuddy2API Hub as a provider AstrLink serves
+// through the new-api plugin contract (apiVersion 1). That contract carries
+// what the v2 provider adapter lacks: the balance hooks, so the provider page
+// shows the hub's remaining credits, read with the provider's own key, and a
+// key hint under the key field.
+//
+// Routing, failover, records, prices and the privacy check stay the
+// gateway's: the relay routes below name the hub's paths, and the request
+// goes upstream as the gateway built it.
+
+export const meta = {
+  apiVersion: 1,
+  key: "workbuddy2api-hub-relay",
+  name: { en: "WorkBuddy2API Hub (balance)", "zh-CN": "WorkBuddy2API Hub（带余额）" },
+  version: "0.2.0",
+  author: { name: "nasvip" },
+  description: {
+    en: "WorkBuddy2API Hub as a provider, with its credits on the provider page.",
+    "zh-CN": "把 WorkBuddy2API Hub 接成提供商，并在提供商页显示剩余额度。",
+  },
+  baseUrl: "http://127.0.0.1:8788/v1",
+  keyHint: {
+    en: "The hub's API key: Settings → API Key on the hub's dashboard.",
+    "zh-CN": "hub 的 API Key：看板「设置 → API Key」，或 LAN 模式启动时控制台打印的那个。",
+  },
+  // The models a new provider starts with; "拉取模型" reads the hub's own list,
+  // which is the key's realm and permissions.
+  models: [
+    "default-model",
+    "deepseek-v4.1-flash",
+    "deepseek-v4.1-flash-sg",
+    "hy4-preview",
+    "hy3",
+    "gpt-6-astra",
+    "gpt-6.1-sol",
+    "gpt-6-sol",
+    "gpt-6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "grok-4.7",
+    "gemini-3.8-flash",
+    "glm-5.3",
+    "glm-5.3-flash",
+    "kimi-k3.1-pro",
+    "kimi-k3.1-pro-highspeed",
+    "kimi-k3",
+    "minimax-m3.1-flash",
+  ],
+  relay: [
+    { incoming_path: "/v1/chat/completions", upstream_path: "/chat/completions" },
+    { incoming_path: "/v1/responses", upstream_path: "/responses" },
+    // The management route the providers page reads models through.
+    { incoming_path: "/v1/models", upstream_path: "/models" },
+  ],
+};
+
+/** What every balance hook gets: the provider's address and its key. */
+interface BalanceContext {
+  baseUrl: string;
+  apiKey: string;
+  config?: Record<string, unknown>;
+}
+
+/** An answer of the hub, as parseBalance gets it. */
+interface BalanceAnswer {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
+ * buildBalanceRequest asks the hub for the credit snapshot it keeps of a key.
+ * The gateway sends it to the provider's own address with the provider's key,
+ * so this names the path only. The hub answers from a cache and never calls
+ * upstream for it.
+ */
+export function buildBalanceRequest(_ctx: BalanceContext) {
+  return { method: "GET", path: "/balance-summary" };
+}
+
+/**
+ * parseBalance reads {"balance": n, "unit": "credit", "realm": "…"} into what
+ * the provider page shows. The hub counts credits, not a currency, so the
+ * amount carries "CRD" as its three-letter code; the page draws the number
+ * with that code. A hub with no snapshot yet reports null, which is said as it
+ * is instead of as a zero balance.
+ */
+export function parseBalance(_ctx: BalanceContext, answer: BalanceAnswer) {
+  if (answer.status === 401 || answer.status === 403) {
+    return { error: "密钥无效或没有权限（" + answer.status + "）" };
+  }
+  if (answer.status >= 400) {
+    return { error: "hub 返回 " + answer.status };
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(answer.body) as Record<string, unknown>;
+  } catch {
+    return { error: "hub 的应答不是 JSON" };
+  }
+  if (typeof body.balance !== "number") {
+    return { error: "hub 还没有这个 key 的余额快照" };
+  }
+  return { amount: body.balance, currency: "CRD" };
+}
