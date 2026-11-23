@@ -1,270 +1,62 @@
 [
   {
-    "name": "sends a chat request to the hub",
-    "hook": "buildRequest",
+    "name": "asks the hub for the balance of the provider's key",
+    "hook": "buildBalanceRequest",
     "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol",
-        "stream": true,
-        "attempt": 0,
-        "body": {
-          "model": "gpt-6-sol",
-          "stream": true,
-          "messages": [{ "role": "user", "content": "hi" }]
-        }
-      }
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} }
     ],
-    "expect": {
-      "result": {
-        "url": "/chat/completions",
-        "body": {
-          "model": "gpt-6-sol",
-          "stream": true,
-          "messages": [{ "role": "user", "content": "hi" }]
-        }
-      }
-    }
+    "expected": { "method": "GET", "path": "/balance-summary" }
   },
   {
-    "name": "sends a Responses request to the hub",
-    "hook": "buildRequest",
+    "name": "reads the credits the hub reports",
+    "hook": "parseBalance",
     "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.responses",
-        "model": "gpt-6-sol",
-        "stream": false,
-        "body": { "model": "gpt-6-sol", "input": "hi" }
-      }
-    ],
-    "expect": {
-      "result": { "url": "/responses", "body": { "model": "gpt-6-sol", "input": "hi" } }
-    }
-  },
-  {
-    "name": "asks the hub for its model list",
-    "hook": "buildRequest",
-    "args": [
-      {
-        "purpose": "models",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" }
-      }
-    ],
-    "expect": { "result": { "method": "GET", "url": "/models" } }
-  },
-  {
-    "name": "reads the model list",
-    "hook": "parseResponse",
-    "args": [
-      {
-        "purpose": "models",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" }
-      },
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} },
       {
         "status": 200,
         "headers": { "content-type": "application/json" },
-        "body": "",
-        "json": {
-          "object": "list",
-          "data": [{ "id": "hy3" }, { "id": "glm-5.3" }, { "name": "no id" }, { "id": "" }]
-        }
+        "body": "{\"balance\":12.5,\"unit\":\"credit\",\"realm\":\"intl\",\"accounts_enabled\":2,\"accounts_with_credit_data\":2,\"updated_at\":1790000000}"
       }
     ],
-    "expect": { "result": { "models": ["hy3", "glm-5.3"] } }
+    "expected": { "amount": 12.5, "currency": "CRD" }
   },
   {
-    "name": "passes a whole chat answer through",
-    "hook": "parseResponse",
+    "name": "reads a zero balance as zero",
+    "hook": "parseBalance",
     "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol",
-        "stream": false
-      },
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} },
       {
         "status": 200,
         "headers": { "content-type": "application/json" },
-        "body": "{}",
-        "json": {
-          "id": "chatcmpl-wb-1",
-          "object": "chat.completion",
-          "model": "gpt-6-sol",
-          "choices": [
-            {
-              "index": 0,
-              "message": { "role": "assistant", "content": "hi" },
-              "finish_reason": "stop"
-            }
-          ],
-          "usage": { "prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4 }
-        }
+        "body": "{\"balance\":0,\"unit\":\"credit\",\"realm\":\"intl\",\"accounts_enabled\":1,\"accounts_with_credit_data\":1,\"updated_at\":1790000000}"
       }
     ],
-    "expect": {
-      "result": {
-        "status": 200,
-        "json": {
-          "id": "chatcmpl-wb-1",
-          "object": "chat.completion",
-          "model": "gpt-6-sol",
-          "choices": [
-            {
-              "index": 0,
-              "message": { "role": "assistant", "content": "hi" },
-              "finish_reason": "stop"
-            }
-          ],
-          "usage": { "prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4 }
-        }
-      }
-    }
+    "expected": { "amount": 0, "currency": "CRD" }
   },
   {
-    "name": "passes a streamed chunk through",
-    "hook": "parseStreamEvent",
+    "name": "says a key is refused instead of showing zero",
+    "hook": "parseBalance",
     "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol",
-        "stream": true
-      },
-      { "data": "{\"delta\":\"he\"}", "json": { "delta": "he" } },
-      null
-    ],
-    "expect": { "result": { "events": [{ "data": "{\"delta\":\"he\"}" }] } }
-  },
-  {
-    "name": "ends on the terminator",
-    "hook": "parseStreamEvent",
-    "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol",
-        "stream": true
-      },
-      { "data": "[DONE]" },
-      null
-    ],
-    "expect": { "result": { "events": [{ "data": "[DONE]" }], "done": true } }
-  },
-  {
-    "name": "keeps the name of a Responses event",
-    "hook": "parseStreamEvent",
-    "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.responses",
-        "model": "gpt-6-sol",
-        "stream": true
-      },
-      {
-        "event": "response.output_text.delta",
-        "data": "{\"delta\":\"he\"}",
-        "json": { "delta": "he" }
-      },
-      null
-    ],
-    "expect": {
-      "result": {
-        "events": [{ "event": "response.output_text.delta", "data": "{\"delta\":\"he\"}" }]
-      }
-    }
-  },
-  {
-    "name": "lets another provider serve an account without credit",
-    "hook": "parseError",
-    "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol"
-      },
-      {
-        "status": 402,
-        "headers": { "content-type": "application/json" },
-        "body": "",
-        "json": {
-          "error": { "message": "no credit", "type": "insufficient_credit", "code": 402 }
-        }
-      }
-    ],
-    "expect": {
-      "result": {
-        "status": 402,
-        "code": "402",
-        "message": "no credit",
-        "retryable": true
-      }
-    }
-  },
-  {
-    "name": "keeps a refusal by the provider's own key",
-    "hook": "parseError",
-    "args": [
-      {
-        "purpose": "chat",
-        "provider": "workbuddy2api-hub",
-        "baseUrl": "http://127.0.0.1:8788/v1",
-        "settings": {},
-        "service": { "id": "svc-1", "name": "Hub" },
-        "protocol": "openai.chat",
-        "model": "gpt-6-sol"
-      },
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-bad", "config": {} },
       {
         "status": 401,
         "headers": { "content-type": "application/json" },
-        "body": "",
-        "json": {
-          "error": { "message": "bad key", "type": "invalid_api_key", "code": 401 }
-        }
+        "body": "{\"error\":{\"message\":\"invalid key\"}}"
       }
     ],
-    "expect": {
-      "result": {
-        "status": 401,
-        "code": "401",
-        "message": "bad key",
-        "retryable": false
+    "expected": { "error": "密钥无效或没有权限（401）" }
+  },
+  {
+    "name": "says the hub has no snapshot yet",
+    "hook": "parseBalance",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} },
+      {
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{\"balance\":null,\"unit\":\"credit\",\"realm\":\"intl\",\"accounts_enabled\":0,\"accounts_with_credit_data\":0,\"updated_at\":null}"
       }
-    }
+    ],
+    "expected": { "error": "hub 还没有这个 key 的余额快照" }
   }
 ]

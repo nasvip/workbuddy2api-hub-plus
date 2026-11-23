@@ -1,166 +1,128 @@
-// workbuddy2api-hub-plus: adds WorkBuddy2API Hub as a provider AstrLink routes
-// to. The hub answers in OpenAI's own protocols, so this adapter only names
-// the paths and passes the requests and the answers through: the gateway
-// still sends the key, keeps the traffic on the provider's address, and does
-// routing, failover, records, prices and the privacy check.
+// workbuddy2api-hub-plus: WorkBuddy2API Hub as a provider AstrLink serves
+// through the new-api plugin contract (apiVersion 1).
 //
-// Two kinds are offered because the hub keeps two catalogues — the
-// international one and the Chinese one — whose model ids differ. The key on
-// the provider decides which realm the hub serves; the kind only decides the
-// model list a new provider starts with.
+// This contract is the one that carries the balance hooks — the plugin sees
+// the provider's key there, which the v2 provider adapter does not — so the
+// provider page shows the hub's remaining credits, read with the provider's
+// own key.
+//
+// Requests themselves are the gateway's: each relay route below names the
+// hub's path, the gateway sends the body it built (after the privacy check,
+// model mapping and failover), and AstrLink's own converters turn a Claude or
+// Gemini request into a Chat Completions one before it leaves.
+//
+// The hub speaks OpenAI's protocols itself, so nothing here converts a body.
 
 export const meta = {
-  apiVersion: 2,
+  apiVersion: 1,
   key: "workbuddy2api-hub-plus",
-  name: "WorkBuddy2API Hub",
-  version: "0.1.0",
-  capabilities: ["provider"],
-  providers: [
-    {
-      id: "workbuddy2api-hub",
-      name: "WorkBuddy2API Hub（国际版）",
-      baseUrl: "http://127.0.0.1:8788/v1",
-      auth: "bearer",
-      protocols: { "openai.chat": { stream: true }, "openai.responses": { stream: true } },
-      // Clients speaking another protocol reach the hub as Chat Completions.
-      convert: true,
-      models: [
-        "default-model",
-        "deepseek-v4.1-flash",
-        "deepseek-v4.1-flash-sg",
-        "hy4-preview",
-        "hy3",
-        "gpt-6-astra",
-        "gpt-6.1-sol",
-        "gpt-6-sol",
-        "gpt-6-luna",
-        "gpt-5.6-sol",
-        "gpt-5.6-terra",
-        "gpt-5.6-luna",
-        "grok-4.7",
-        "gemini-3.8-flash",
-        "glm-5.3",
-        "glm-5.3-flash",
-        "kimi-k3.1-pro",
-        "kimi-k3.1-pro-highspeed",
-        "kimi-k3",
-        "minimax-m3.1-flash",
-      ],
-    },
-    {
-      id: "workbuddy2api-hub-cn",
-      name: "WorkBuddy2API Hub（国内版）",
-      baseUrl: "http://127.0.0.1:8788/v1",
-      auth: "bearer",
-      protocols: { "openai.chat": { stream: true }, "openai.responses": { stream: true } },
-      convert: true,
-      models: [
-        "hy4-preview-f",
-        "hy3",
-        "deepseek-v4.1-flash",
-        "glm-5.3",
-        "glm-5.3-flash",
-        "glm-5.2",
-        "glm-5.1",
-        "glm-5v-turbo",
-        "minimax-m3",
-        "kimi-k3-1",
-        "kimi-k2.8-preview",
-        "kimi-k2.7",
-        "kimi-k2.6",
-        "deepseek-v4-pro",
-      ],
-    },
+  name: { en: "WorkBuddy2API Hub", "zh-CN": "WorkBuddy2API Hub" },
+  version: "0.3.0",
+  author: { name: "nasvip" },
+  description: {
+    en: "WorkBuddy2API Hub as a provider, with its credits on the provider page.",
+    "zh-CN": "把 WorkBuddy2API Hub 接成提供商，并在提供商页显示剩余额度。",
+  },
+  baseUrl: "http://127.0.0.1:8788/v1",
+  keyHint: {
+    en: "The hub's API key: Settings → API Key on the hub's dashboard.",
+    "zh-CN": "hub 的 API Key：看板「设置 → API Key」，或 LAN 模式启动时控制台打印的那个。",
+  },
+  // What a new provider starts with: the hub's international catalogue, which
+  // is its default realm. "拉取模型" reads the key's own list — the realm and
+  // the permissions decide it — and replaces this one.
+  models: [
+    "default-model",
+    "deepseek-v4.1-flash",
+    "deepseek-v4.1-flash-sg",
+    "hy4-preview",
+    "hy3",
+    "gpt-6-astra",
+    "gpt-6.1-sol",
+    "gpt-6-sol",
+    "gpt-6-luna",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "grok-4.7",
+    "gemini-3.8-flash",
+    "glm-5.3",
+    "glm-5.3-flash",
+    "kimi-k3.1-pro",
+    "kimi-k3.1-pro-highspeed",
+    "kimi-k3",
+    "minimax-m3.1-flash",
   ],
-} satisfies AstrLinkPlugin.Meta;
-
-/** Where the hub serves each protocol, under the provider's address. */
-const protocolPaths: Record<string, string> = {
-  "openai.chat": "/chat/completions",
-  "openai.responses": "/responses",
+  relay: [
+    // Chat Completions and Responses go to the hub as they are: it serves both
+    // itself, and its Responses layer is written for Codex-like clients.
+    { incoming_path: "/v1/chat/completions", upstream_path: "/chat/completions" },
+    { incoming_path: "/v1/responses", upstream_path: "/responses" },
+    // Claude Code and Gemini clients reach the hub's Chat Completions path
+    // through the gateway's converters: the hub's own /v1/messages is off by
+    // default and ignores cache_control, and its Gemini route answers whole
+    // bodies only.
+    {
+      incoming_path: "/v1/messages",
+      upstream_path: "/chat/completions",
+      converter: "anthropic_messages_to_openai_chat_completions",
+    },
+    {
+      incoming_path: "/v1beta/models/{model}:generateContent",
+      upstream_path: "/chat/completions",
+      converter: "gemini_generate_content_to_openai_chat_completions",
+    },
+    // The management route the providers page reads the model list through.
+    { incoming_path: "/v1/models", upstream_path: "/models" },
+  ],
 };
 
-/**
- * buildRequest describes the upstream request: the model list is a GET on the
- * hub's own /models, everything else is the request the gateway would have
- * sent, at the path of its protocol. The body is left as it is — the hub
- * normalizes the parameters of the clients it serves itself, and rewriting
- * them here would only fight it.
- */
-export async function buildRequest(
-  ctx: AstrLinkPlugin.ProviderContext,
-): Promise<AstrLinkPlugin.ProviderRequest> {
-  if (ctx.purpose === "models") return { method: "GET", url: "/models" };
-  const path = protocolPaths[ctx.protocol ?? "openai.chat"] ?? "/chat/completions";
-  return { url: path, body: ctx.body };
+/** What every balance hook gets: the provider's address and its key. */
+interface BalanceContext {
+  baseUrl: string;
+  apiKey: string;
+  config?: Record<string, unknown>;
+}
+
+/** An answer of the hub, as parseBalance gets it. */
+interface BalanceAnswer {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
 }
 
 /**
- * parseResponse turns the hub's answer back into the protocol's: its model
- * list, or its response, which already is the protocol's own.
+ * buildBalanceRequest asks the hub for the credit snapshot it keeps of a key.
+ * The gateway sends it to the provider's own address with the provider's key,
+ * so this names the path only. The hub answers from its cache and never calls
+ * upstream for it.
  */
-export async function parseResponse(
-  ctx: AstrLinkPlugin.ProviderContext,
-  res: AstrLinkPlugin.ProviderResponse,
-): Promise<AstrLinkPlugin.ProviderResult> {
-  if (ctx.purpose === "models") {
-    const list = res.json?.data;
-    if (!Array.isArray(list)) throw new Error("the hub answered no model list");
-    const models = list
-      .map((model: unknown) => (model as { id?: unknown })?.id)
-      .filter((id): id is string => typeof id === "string" && id !== "");
-    return { models };
+export function buildBalanceRequest(_ctx: BalanceContext) {
+  return { method: "GET", path: "/balance-summary" };
+}
+
+/**
+ * parseBalance reads {"balance": n, "unit": "credit", "realm": "…"} into what
+ * the provider page shows. The hub counts credits, not a currency, so the
+ * amount carries "CRD" as its three-letter code and the page draws the number
+ * with that code. A hub that has no snapshot yet, or a key it refuses, says so
+ * instead of showing a zero balance.
+ */
+export function parseBalance(_ctx: BalanceContext, answer: BalanceAnswer) {
+  if (answer.status === 401 || answer.status === 403) {
+    return { error: "密钥无效或没有权限（" + answer.status + "）" };
   }
-  if (res.json == null) throw new Error("the hub answered no JSON");
-  return { status: res.status, json: res.json };
-}
-
-/**
- * parseStreamEvent passes one event of the hub's stream on. The gateway does
- * the framing on both sides: the hub's comments and keepalives are already
- * gone by the time this sees an event.
- */
-export async function parseStreamEvent(
-  _ctx: AstrLinkPlugin.ProviderContext,
-  event: AstrLinkPlugin.UpstreamEvent,
-): Promise<AstrLinkPlugin.StreamStep<null>> {
-  const data = event.data;
-  if (typeof data === "string" && data.trim() === "[DONE]") {
-    return { events: [{ data: "[DONE]" }], done: true };
+  if (answer.status >= 400) {
+    return { error: "hub 返回 " + answer.status };
   }
-  // A failure that happens mid-stream arrives as a last event whose JSON
-  // carries an error, instead of the terminator. Pass it on and stop reading.
-  const failed =
-    event.json != null && typeof event.json === "object" && "error" in event.json;
-  const answer: AstrLinkPlugin.StreamStep<null> = {
-    events: [event.event ? { event: event.event, data } : { data }],
-  };
-  if (failed) answer.done = true;
-  return answer;
-}
-
-/** Statuses AstrLink may hand the request to another provider for. */
-function retryable(status: number): boolean {
-  return status >= 500 || status === 402 || status === 408 || status === 425 || status === 429;
-}
-
-/**
- * parseError reads the hub's {"error":{message,type,code}} into what the
- * gateway decides failover on. 402 (the upstream account is out of credit),
- * 429 (rate limited) and 5xx (including 503, no usable account) are worth
- * another provider; 401 and 403 are this provider's key or its quota, and
- * failover would only repeat the refusal.
- */
-export async function parseError(
-  _ctx: AstrLinkPlugin.ProviderContext,
-  res: AstrLinkPlugin.ProviderResponse,
-): Promise<AstrLinkPlugin.ProviderError> {
-  const error = res.json?.error ?? {};
-  const message = String(error.message ?? res.body ?? "").trim();
-  return {
-    status: res.status,
-    code: String(error.code ?? error.type ?? "upstream_error"),
-    message: message.slice(0, 2000) || "the hub refused the request",
-    retryable: retryable(res.status),
-  };
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(answer.body) as Record<string, unknown>;
+  } catch {
+    return { error: "hub 的应答不是 JSON" };
+  }
+  if (typeof body.balance !== "number") {
+    return { error: "hub 还没有这个 key 的余额快照" };
+  }
+  return { amount: body.balance, currency: "CRD" };
 }
