@@ -40,8 +40,9 @@ https://github.com/nasvip/workbuddy2api-hub-plus
 ## 余额卡怎么来的
 
 - 插件声明 `buildBalanceRequest`，网关向 `GET {提供商地址}/balance-summary` 发一次请求；
-- 这个请求**不在 relay 路由里**，网关只在钩子的 `ctx.apiKey` 里把密钥交给插件、不替它加请求头，所以插件自己写
-  `Authorization: Bearer <key>`（粘了带前缀的 key 不会重复加）；
+- 这个请求**不在 relay 路由里**，网关只把密钥放进钩子的 `ctx.apiKey`；而传输层会删掉出站请求里的
+  `Authorization` / `Cookie` / `X-Api-Key`（`transport/forwarder.go` 的 `removeInboundCredentials`），
+  所以插件把密钥放在 `Api-Key` 头里发出去——hub 认这个拼写，又不在删除名单里；
 - `parseBalance` 把 `{"balance": n, "unit": "credit"}` 读成 `{amount, currency: "CRD"}`——hub 计的是积分，不是货币，所以用三字母码 `CRD`；
 - hub 没有余额快照（`balance: null`）、密钥被拒（401/403）或应答不是 JSON 时，卡片显示原因，**不会显示成 0**，也不影响推理。
 
@@ -91,7 +92,8 @@ hub 有这两个接口，但都是转成 Chat Completions 的桥，而且：
 
 ## 版本
 
-- `0.3.1`：修余额卡 401（余额请求要插件自己带 `Authorization`，网关只把 key 交给钩子）。
+- `0.3.2`：余额请求改用 `Api-Key` 头带密钥（传输层会删掉 `Authorization` / `X-Api-Key`）。
+- `0.3.1`：余额请求自己带 `Authorization`（被传输层删除，未生效）。
 - `0.3.0`：改为 new-api 插件契约（apiVersion 1），新增余额卡、密钥提示，Claude / Gemini 客户端经网关转换接入。
 - `0.2.0`：新增 `relay/` 版本（已在 0.3.0 合并到根目录）。
 - `0.1.0`：v2 供应商适配器（两种提供商类型、模型拉取、错误映射）。代码在 `v0.1.0` 标签里。

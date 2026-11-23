@@ -8,7 +8,7 @@
     "expected": {
       "method": "GET",
       "path": "/balance-summary",
-      "headers": { "Authorization": "Bearer sk-test" }
+      "headers": { "Authorization": "Bearer sk-test", "Api-Key": "sk-test" }
     }
   },
   {
@@ -20,8 +20,14 @@
     "expected": {
       "method": "GET",
       "path": "/balance-summary",
-      "headers": { "Authorization": "Bearer sk-typed" }
+      "headers": { "Authorization": "Bearer sk-typed", "Api-Key": "sk-typed" }
     }
+  },
+  {
+    "name": "sends no credential when the provider has no key",
+    "hook": "buildBalanceRequest",
+    "args": [{ "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "", "config": {} }],
+    "expected": { "method": "GET", "path": "/balance-summary" }
   },
   {
     "name": "reads the credits the hub reports",

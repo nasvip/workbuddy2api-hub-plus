@@ -17,7 +17,7 @@ export const meta = {
   apiVersion: 1,
   key: "workbuddy2api-hub-plus",
   name: { en: "WorkBuddy2API Hub", "zh-CN": "WorkBuddy2API Hub" },
-  version: "0.3.1",
+  version: "0.3.2",
   author: { name: "nasvip" },
   description: {
     en: "WorkBuddy2API Hub as a provider, with its credits on the provider page.",
@@ -93,23 +93,26 @@ interface BalanceAnswer {
 
 /**
  * buildBalanceRequest asks the hub for the credit snapshot it keeps of a key.
- * A balance request runs outside the relay routes, and there the gateway hands
- * the key to the hook instead of attaching it (pluginhost/relay.go, authFor),
- * so this writes the Authorization header itself.
+ *
+ * A balance request runs outside the relay routes, so the gateway does not
+ * attach the provider's key itself; it hands it to the hook as ctx.apiKey and
+ * expects the plugin to carry it. Authorization alone does not reach the hub:
+ * the transport strips inbound credentials from every outbound request
+ * (transport/forwarder.go, removeInboundCredentials drops Authorization,
+ * Cookie, X-Api-Key and X-Goog-Api-Key), so the key rides in Api-Key, one of
+ * the spellings the hub reads and one the strip list does not cover.
  */
 export function buildBalanceRequest(ctx: BalanceContext) {
+  const key = String(ctx.apiKey ?? "").trim();
+  if (!key) return { method: "GET", path: "/balance-summary" };
   return {
     method: "GET",
     path: "/balance-summary",
-    headers: authorization(ctx.apiKey),
+    headers: {
+      Authorization: /^bearer\s/i.test(key) ? key : "Bearer " + key,
+      "Api-Key": key.replace(/^bearer\s+/i, ""),
+    },
   };
-}
-
-/** The bearer header for a key, as the user typed it or with the scheme. */
-function authorization(apiKey: string): Record<string, string> {
-  const key = String(apiKey ?? "").trim();
-  if (!key) return {};
-  return { Authorization: /^bearer\s/i.test(key) ? key : "Bearer " + key };
 }
 
 /**

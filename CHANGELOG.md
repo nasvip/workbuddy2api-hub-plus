@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.3.2
+
+- 再修余额卡 401：0.3.1 写的 `Authorization` 到不了上游——传输层对每个出站请求都会删掉
+  `Authorization`、`Cookie`、`X-Api-Key`、`X-Goog-Api-Key`（`transport/forwarder.go` 的
+  `removeInboundCredentials`）。现在密钥同时放在 `Api-Key` 里（hub 也认这个拼写，且不在删除名单里），
+  `Authorization` 保留给将来不再删它的版本。
+
 ## 0.3.1
 
 - 修余额卡 401：余额请求不在 relay 路由里，网关只把 key 交给钩子、不替你加请求头
