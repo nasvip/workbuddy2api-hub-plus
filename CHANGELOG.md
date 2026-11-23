@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.3.1
+
+- 修余额卡 401：余额请求不在 relay 路由里，网关只把 key 交给钩子、不替你加请求头
+  （`pluginhost/relay.go` 的 `authFor`），所以插件现在自己写 `Authorization: Bearer <key>`。
+  用户直接粘了带 `Bearer ` 前缀的 key 时不会重复添加。
+
 ## 0.3.0
 
 - 改为 new-api 插件契约（apiVersion 1）：插件不再逐请求跑钩子，请求由网关按 relay 路由直通。

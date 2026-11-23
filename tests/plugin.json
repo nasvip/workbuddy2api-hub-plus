@@ -1,11 +1,27 @@
 [
   {
-    "name": "asks the hub for the balance of the provider's key",
+    "name": "asks the hub for the balance, with the provider's key",
     "hook": "buildBalanceRequest",
     "args": [
       { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "sk-test", "config": {} }
     ],
-    "expected": { "method": "GET", "path": "/balance-summary" }
+    "expected": {
+      "method": "GET",
+      "path": "/balance-summary",
+      "headers": { "Authorization": "Bearer sk-test" }
+    }
+  },
+  {
+    "name": "keeps a key the user wrote with the scheme",
+    "hook": "buildBalanceRequest",
+    "args": [
+      { "baseUrl": "http://127.0.0.1:8788/v1", "apiKey": "Bearer sk-typed", "config": {} }
+    ],
+    "expected": {
+      "method": "GET",
+      "path": "/balance-summary",
+      "headers": { "Authorization": "Bearer sk-typed" }
+    }
   },
   {
     "name": "reads the credits the hub reports",

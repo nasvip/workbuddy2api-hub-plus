@@ -17,7 +17,7 @@ export const meta = {
   apiVersion: 1,
   key: "workbuddy2api-hub-plus",
   name: { en: "WorkBuddy2API Hub", "zh-CN": "WorkBuddy2API Hub" },
-  version: "0.3.0",
+  version: "0.3.1",
   author: { name: "nasvip" },
   description: {
     en: "WorkBuddy2API Hub as a provider, with its credits on the provider page.",
@@ -93,12 +93,23 @@ interface BalanceAnswer {
 
 /**
  * buildBalanceRequest asks the hub for the credit snapshot it keeps of a key.
- * The gateway sends it to the provider's own address with the provider's key,
- * so this names the path only. The hub answers from its cache and never calls
- * upstream for it.
+ * A balance request runs outside the relay routes, and there the gateway hands
+ * the key to the hook instead of attaching it (pluginhost/relay.go, authFor),
+ * so this writes the Authorization header itself.
  */
-export function buildBalanceRequest(_ctx: BalanceContext) {
-  return { method: "GET", path: "/balance-summary" };
+export function buildBalanceRequest(ctx: BalanceContext) {
+  return {
+    method: "GET",
+    path: "/balance-summary",
+    headers: authorization(ctx.apiKey),
+  };
+}
+
+/** The bearer header for a key, as the user typed it or with the scheme. */
+function authorization(apiKey: string): Record<string, string> {
+  const key = String(apiKey ?? "").trim();
+  if (!key) return {};
+  return { Authorization: /^bearer\s/i.test(key) ? key : "Bearer " + key };
 }
 
 /**

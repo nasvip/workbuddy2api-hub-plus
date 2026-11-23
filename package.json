@@ -1,6 +1,6 @@
 {
   "name": "astrlink-plugin-workbuddy2api-hub-plus",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "WorkBuddy2API Hub as an AstrLink provider, with its credits on the provider page",
