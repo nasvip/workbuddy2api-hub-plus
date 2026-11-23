@@ -1,0 +1,9 @@
+{
+  "name": "astrlink-plugin-workbuddy2api-hub-plus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Adds WorkBuddy2API Hub as a provider AstrLink can route to",
+  "engines": { "astrlink": ">=0.1.0-0" },
+  "astrlink": { "plugin": "src/plugin.ts" }
+}

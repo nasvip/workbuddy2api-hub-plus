@@ -1,0 +1,270 @@
+[
+  {
+    "name": "sends a chat request to the hub",
+    "hook": "buildRequest",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol",
+        "stream": true,
+        "attempt": 0,
+        "body": {
+          "model": "gpt-6-sol",
+          "stream": true,
+          "messages": [{ "role": "user", "content": "hi" }]
+        }
+      }
+    ],
+    "expect": {
+      "result": {
+        "url": "/chat/completions",
+        "body": {
+          "model": "gpt-6-sol",
+          "stream": true,
+          "messages": [{ "role": "user", "content": "hi" }]
+        }
+      }
+    }
+  },
+  {
+    "name": "sends a Responses request to the hub",
+    "hook": "buildRequest",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.responses",
+        "model": "gpt-6-sol",
+        "stream": false,
+        "body": { "model": "gpt-6-sol", "input": "hi" }
+      }
+    ],
+    "expect": {
+      "result": { "url": "/responses", "body": { "model": "gpt-6-sol", "input": "hi" } }
+    }
+  },
+  {
+    "name": "asks the hub for its model list",
+    "hook": "buildRequest",
+    "args": [
+      {
+        "purpose": "models",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" }
+      }
+    ],
+    "expect": { "result": { "method": "GET", "url": "/models" } }
+  },
+  {
+    "name": "reads the model list",
+    "hook": "parseResponse",
+    "args": [
+      {
+        "purpose": "models",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" }
+      },
+      {
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "",
+        "json": {
+          "object": "list",
+          "data": [{ "id": "hy3" }, { "id": "glm-5.3" }, { "name": "no id" }, { "id": "" }]
+        }
+      }
+    ],
+    "expect": { "result": { "models": ["hy3", "glm-5.3"] } }
+  },
+  {
+    "name": "passes a whole chat answer through",
+    "hook": "parseResponse",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol",
+        "stream": false
+      },
+      {
+        "status": 200,
+        "headers": { "content-type": "application/json" },
+        "body": "{}",
+        "json": {
+          "id": "chatcmpl-wb-1",
+          "object": "chat.completion",
+          "model": "gpt-6-sol",
+          "choices": [
+            {
+              "index": 0,
+              "message": { "role": "assistant", "content": "hi" },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": { "prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4 }
+        }
+      }
+    ],
+    "expect": {
+      "result": {
+        "status": 200,
+        "json": {
+          "id": "chatcmpl-wb-1",
+          "object": "chat.completion",
+          "model": "gpt-6-sol",
+          "choices": [
+            {
+              "index": 0,
+              "message": { "role": "assistant", "content": "hi" },
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": { "prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4 }
+        }
+      }
+    }
+  },
+  {
+    "name": "passes a streamed chunk through",
+    "hook": "parseStreamEvent",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol",
+        "stream": true
+      },
+      { "data": "{\"delta\":\"he\"}", "json": { "delta": "he" } },
+      null
+    ],
+    "expect": { "result": { "events": [{ "data": "{\"delta\":\"he\"}" }] } }
+  },
+  {
+    "name": "ends on the terminator",
+    "hook": "parseStreamEvent",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol",
+        "stream": true
+      },
+      { "data": "[DONE]" },
+      null
+    ],
+    "expect": { "result": { "events": [{ "data": "[DONE]" }], "done": true } }
+  },
+  {
+    "name": "keeps the name of a Responses event",
+    "hook": "parseStreamEvent",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.responses",
+        "model": "gpt-6-sol",
+        "stream": true
+      },
+      {
+        "event": "response.output_text.delta",
+        "data": "{\"delta\":\"he\"}",
+        "json": { "delta": "he" }
+      },
+      null
+    ],
+    "expect": {
+      "result": {
+        "events": [{ "event": "response.output_text.delta", "data": "{\"delta\":\"he\"}" }]
+      }
+    }
+  },
+  {
+    "name": "lets another provider serve an account without credit",
+    "hook": "parseError",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol"
+      },
+      {
+        "status": 402,
+        "headers": { "content-type": "application/json" },
+        "body": "",
+        "json": {
+          "error": { "message": "no credit", "type": "insufficient_credit", "code": 402 }
+        }
+      }
+    ],
+    "expect": {
+      "result": {
+        "status": 402,
+        "code": "402",
+        "message": "no credit",
+        "retryable": true
+      }
+    }
+  },
+  {
+    "name": "keeps a refusal by the provider's own key",
+    "hook": "parseError",
+    "args": [
+      {
+        "purpose": "chat",
+        "provider": "workbuddy2api-hub",
+        "baseUrl": "http://127.0.0.1:8788/v1",
+        "settings": {},
+        "service": { "id": "svc-1", "name": "Hub" },
+        "protocol": "openai.chat",
+        "model": "gpt-6-sol"
+      },
+      {
+        "status": 401,
+        "headers": { "content-type": "application/json" },
+        "body": "",
+        "json": {
+          "error": { "message": "bad key", "type": "invalid_api_key", "code": 401 }
+        }
+      }
+    ],
+    "expect": {
+      "result": {
+        "status": 401,
+        "code": "401",
+        "message": "bad key",
+        "retryable": false
+      }
+    }
+  }
+]
