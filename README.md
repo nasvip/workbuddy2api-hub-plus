@@ -13,6 +13,8 @@
 | 认证方式 | `Authorization: Bearer`；密钥提示写在密钥框下面 |
 | Chat Completions | 直通 `POST /v1/chat/completions`（整段与流式） |
 | Responses | 直通 `POST /v1/responses`（Codex 一类客户端保真度最高） |
+| Responses 压缩 | 直通 `POST /v1/responses/compact`（Codex 整理上下文时自己会调） |
+| 旧版 Completions | 直通 `POST /v1/completions`（老客户端还在用） |
 | Claude Code | `/v1/messages` 由 AstrLink 转成 Chat Completions 再发给 hub |
 | Gemini 客户端 | `/v1beta/models/{model}:generateContent` 同样转成 Chat Completions |
 | 模型清单 | 预填国际版 20 个；保存后可「拉取模型」读 hub 的 `/v1/models` |
@@ -92,6 +94,7 @@ hub 有这两个接口，但都是转成 Chat Completions 的桥，而且：
 
 ## 版本
 
+- `0.3.3`：补上 `/v1/responses/compact`（Codex 上下文压缩）和 `/v1/completions`（旧版接口）两条路由。
 - `0.3.2`：余额请求改用 `Api-Key` 头带密钥（传输层会删掉 `Authorization` / `X-Api-Key`）。
 - `0.3.1`：余额请求自己带 `Authorization`（被传输层删除，未生效）。
 - `0.3.0`：改为 new-api 插件契约（apiVersion 1），新增余额卡、密钥提示，Claude / Gemini 客户端经网关转换接入。

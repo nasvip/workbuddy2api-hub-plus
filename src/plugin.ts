@@ -17,7 +17,7 @@ export const meta = {
   apiVersion: 1,
   key: "workbuddy2api-hub-plus",
   name: { en: "WorkBuddy2API Hub", "zh-CN": "WorkBuddy2API Hub" },
-  version: "0.3.2",
+  version: "0.3.3",
   author: { name: "nasvip" },
   description: {
     en: "WorkBuddy2API Hub as a provider, with its credits on the provider page.",
@@ -58,6 +58,11 @@ export const meta = {
     // itself, and its Responses layer is written for Codex-like clients.
     { incoming_path: "/v1/chat/completions", upstream_path: "/chat/completions" },
     { incoming_path: "/v1/responses", upstream_path: "/responses" },
+    // Codex's compaction call and the legacy Completions path are answered by
+    // the hub too; without these routes a client asking for them finds no
+    // provider and the request fails before it reaches the hub.
+    { incoming_path: "/v1/responses/compact", upstream_path: "/responses/compact" },
+    { incoming_path: "/v1/completions", upstream_path: "/completions" },
     // Claude Code and Gemini clients reach the hub's Chat Completions path
     // through the gateway's converters: the hub's own /v1/messages is off by
     // default and ignores cache_control, and its Gemini route answers whole

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.3.3
+
+- 补齐两条 hub 本来就有、而插件没声明的入口：
+  - `/v1/responses/compact` → `/responses/compact`：Codex 整理上下文时自己会调，缺这条会被网关判"没有提供商"。
+  - `/v1/completions` → `/completions`：旧版 Completions 客户端。
+- 现在 relay 共 7 条路由，入口协议 6 个（models 不算协议）。
+
 ## 0.3.2
 
 - 再修余额卡 401：0.3.1 写的 `Authorization` 到不了上游——传输层对每个出站请求都会删掉
