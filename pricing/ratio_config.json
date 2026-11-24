@@ -1,0 +1,55 @@
+{
+  "success": true,
+  "message": "WorkBuddy2API Hub model ratios, derived from OpenRouter list prices",
+  "data": {
+    "model_ratio": {
+      "hy3": 0.066,
+      "deepseek-v4.1-flash": 0.07,
+      "glm-5.3": 0.03495,
+      "glm-5.3-flash": 0.06,
+      "glm-5.2": 0.31,
+      "glm-5.1": 0.7,
+      "glm-5v-turbo": 0.6,
+      "minimax-m3": 0.15,
+      "kimi-k2.6": 0.325,
+      "deepseek-v4-pro": 0.64,
+      "minimax-m3.1-flash": 0.075,
+      "kimi-k3.1-pro": 0.12015,
+      "step-5-preview": 0.5,
+      "mimo-v2.6-pro": 0.2175
+    },
+    "completion_ratio": {
+      "hy3": 4,
+      "deepseek-v4.1-flash": 3,
+      "glm-5.3": 20.028612,
+      "glm-5.3-flash": 3.166667,
+      "glm-5.2": 3.903226,
+      "glm-5.1": 3.142857,
+      "glm-5v-turbo": 3.333333,
+      "minimax-m3": 4,
+      "kimi-k2.6": 5.246154,
+      "deepseek-v4-pro": 2,
+      "minimax-m3.1-flash": 4,
+      "kimi-k3.1-pro": 34.965876,
+      "step-5-preview": 2.7,
+      "mimo-v2.6-pro": 2
+    },
+    "cache_ratio": {
+      "hy3": 0.25,
+      "deepseek-v4.1-flash": 0.03,
+      "glm-5.3": 0.985694,
+      "glm-5.3-flash": 0.166667,
+      "glm-5.2": 0.225806,
+      "glm-5.1": 0.185714,
+      "glm-5v-turbo": 0.2,
+      "minimax-m3": 0.2,
+      "kimi-k2.6": 0.230769,
+      "deepseek-v4-pro": 0.084375,
+      "minimax-m3.1-flash": 0.1,
+      "kimi-k3.1-pro": 0.832293,
+      "step-5-preview": 0.1,
+      "mimo-v2.6-pro": 0.008276
+    },
+    "model_price": {}
+  }
+}
